@@ -6,7 +6,7 @@ lib-optional
 This library provides an `Optional` type - wrapper for representing an optional object which may or may not contain an initialized value.
 Also, this implementation allows storing references:
 
-```
+```c++
 int k = 3;
 Optional<int&> intRef(k);
 k = 1;
@@ -17,7 +17,7 @@ The whole implementation is in `libOptional` namespace.
  
 Integration with CMake
 ----------------------------
-```
+```cmake
 add_subdirectory(third-party/lib-optional)
 target_link_libraries(your-target
     PRIVATE lib-optional
@@ -25,7 +25,7 @@ target_link_libraries(your-target
 ```
 
 Tests can be allowed by setting `BUILD_TESTS` variable to `TRUE`:
-```
+```c++
 mkdir -p build && cd build
 cmake -DBUILD_TESTS=1 ..
 ```
@@ -33,7 +33,7 @@ cmake -DBUILD_TESTS=1 ..
 How to use?
 -----------
 Hopefully, this short example might give you a rough idea about how this type could be used:
-```
+```c++
 #include <lib-optional/optional.hpp>
 using namespace libOptional;
 
