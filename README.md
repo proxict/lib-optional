@@ -1,3 +1,5 @@
+![GitHub](https://img.shields.io/github/license/proxict/lib-optional)
+
 lib-optional
 ------------
 
@@ -13,7 +15,7 @@ assert(*intRef == 1);
 
 The whole implementation is in `libOptional` namespace.
  
-Adding as a CMake dependency
+Integration with CMake
 ----------------------------
 ```
 add_subdirectory(third-party/lib-optional)
