@@ -48,6 +48,8 @@ namespace swapDetail {
 
 } // namespace swapDetail
 
+namespace detail {
+
 template <bool TTest, typename TTrue, typename TFalse>
 using Conditional = typename std::conditional<TTest, TTrue, TFalse>::type;
 
@@ -98,21 +100,23 @@ public:
     Nonmovable& operator=(Nonmovable&&) = delete;
 };
 
+} // namespace detail
+
 template <typename T>
-class Optional final : protected Conditional<std::is_copy_assignable<ReferenceStorage<T>>::value &&
-                                                 std::is_copy_constructible<ReferenceStorage<T>>::value,
-                                             Copyable,
-                                             Noncopyable>,
-                       protected Conditional<std::is_move_assignable<ReferenceStorage<T>>::value &&
-                                                 std::is_move_constructible<ReferenceStorage<T>>::value,
-                                             Movable,
-                                             Nonmovable> {
+class Optional final : protected detail::Conditional<std::is_copy_assignable<detail::ReferenceStorage<T>>::value &&
+                                                 std::is_copy_constructible<detail::ReferenceStorage<T>>::value,
+                                             detail::Copyable,
+                                             detail::Noncopyable>,
+                       protected detail::Conditional<std::is_move_assignable<detail::ReferenceStorage<T>>::value &&
+                                                 std::is_move_constructible<detail::ReferenceStorage<T>>::value,
+                                             detail::Movable,
+                                             detail::Nonmovable> {
 public:
     static_assert(!std::is_rvalue_reference<T>::value, "Optional cannot be used with r-value references");
     static_assert(!std::is_same<T, NullOptionalT>::value, "Optional cannot be used with NullOptionalT");
     static_assert(!std::is_same<T, InPlaceT>::value, "Optional cannot be used with InPlaceT");
 
-    using ValueType = ReferenceStorage<T>;
+    using ValueType = detail::ReferenceStorage<T>;
     using value_type = ValueType; // std traits
     using TRaw = typename std::remove_const<typename std::remove_reference<T>::type>::type;
     using TPtr = TRaw*;
@@ -178,7 +182,7 @@ public:
     /// \note Conditionally explicit
     template <
         typename TOther,
-        EnableIf<!std::is_same<ValueType, TOther>::value &&
+        detail::EnableIf<!std::is_same<ValueType, TOther>::value &&
                      std::is_constructible<ValueType, const typename Optional<TOther>::ValueType&>::value &&
                      std::is_convertible<const typename Optional<TOther>::ValueType&, ValueType>::value &&
                      !IsConstructibleOrConvertibleFrom<TOther>(),
@@ -191,7 +195,7 @@ public:
 
     template <
         typename TOther,
-        EnableIf<!std::is_same<ValueType, TOther>::value &&
+        detail::EnableIf<!std::is_same<ValueType, TOther>::value &&
                      std::is_constructible<ValueType, const typename Optional<TOther>::ValueType&>::value &&
                      !std::is_convertible<const typename Optional<TOther>::ValueType&, ValueType>::value &&
                      !IsConstructibleOrConvertibleFrom<TOther>(),
@@ -208,7 +212,7 @@ public:
     /// \note Conditionally explicit
     template <
         typename TOther,
-        EnableIf<!std::is_same<ValueType, TOther>::value &&
+        detail::EnableIf<!std::is_same<ValueType, TOther>::value &&
                      std::is_constructible<ValueType, const typename Optional<TOther>::ValueType&&>::value &&
                      std::is_convertible<typename Optional<TOther>::ValueType&&, ValueType>::value &&
                      !IsConstructibleOrConvertibleFrom<TOther>(),
@@ -221,7 +225,7 @@ public:
 
     template <
         typename TOther,
-        EnableIf<!std::is_same<ValueType, TOther>::value &&
+        detail::EnableIf<!std::is_same<ValueType, TOther>::value &&
                      std::is_constructible<ValueType, const typename Optional<TOther>::ValueType&&>::value &&
                      !std::is_convertible<typename Optional<TOther>::ValueType&&, ValueType>::value &&
                      !IsConstructibleOrConvertibleFrom<TOther>(),
@@ -234,7 +238,7 @@ public:
     }
 
     /// In place constructor
-    template <typename... TArgs, typename = EnableIf<std::is_constructible<ValueType, TArgs&&...>::value>>
+    template <typename... TArgs, typename = detail::EnableIf<std::is_constructible<ValueType, TArgs&&...>::value>>
     explicit Optional(InPlaceT,
                       TArgs&&... args) noexcept(std::is_nothrow_constructible<ValueType, TArgs...>::value) {
         construct(std::forward<TArgs>(args)...);
@@ -242,7 +246,7 @@ public:
 
     template <typename TOther,
               typename... TArgs,
-              typename = EnableIf<
+              typename = detail::EnableIf<
                   std::is_constructible<ValueType, std::initializer_list<TOther>&, TArgs&&...>::value>>
     explicit Optional(InPlaceT,
                       std::initializer_list<TOther> list,
@@ -252,7 +256,7 @@ public:
 
     /// Constructor
     template <typename TOther = ValueType,
-              EnableIf<std::is_constructible<ValueType, TOther&&>::value &&
+              detail::EnableIf<std::is_constructible<ValueType, TOther&&>::value &&
                            std::is_convertible<typename Optional<TOther>::ValueType&&, ValueType>::value,
                        bool> = true>
     Optional(TOther&& value) noexcept(std::is_nothrow_constructible<ValueType, TOther&&>::value) {
@@ -260,7 +264,7 @@ public:
     }
 
     template <typename TOther = ValueType,
-              EnableIf<std::is_constructible<ValueType, TOther&&>::value &&
+              detail::EnableIf<std::is_constructible<ValueType, TOther&&>::value &&
                            !std::is_convertible<typename Optional<TOther>::ValueType&&, ValueType>::value,
                        bool> = false>
     explicit Optional(TOther&& value) noexcept(std::is_nothrow_constructible<ValueType, TOther&&>::value) {
@@ -316,7 +320,7 @@ public:
     }
 
     template <typename TOther = ValueType>
-    EnableIf<!std::is_same<Optional<TRaw>, typename std::decay<TOther>::type>::value &&
+    detail::EnableIf<!std::is_same<Optional<TRaw>, typename std::decay<TOther>::type>::value &&
                  std::is_constructible<ValueType, TOther>::value &&
                  !(std::is_scalar<ValueType>::value &&
                    std::is_same<ValueType, typename std::decay<TOther>::type>::value) &&
@@ -332,7 +336,7 @@ public:
     }
 
     template <typename TOther>
-    EnableIf<!std::is_same<TOther, TRaw>::value && std::is_constructible<ValueType, const TOther&>::value &&
+    detail::EnableIf<!std::is_same<TOther, TRaw>::value && std::is_constructible<ValueType, const TOther&>::value &&
                  std::is_assignable<ValueType&, TOther>::value &&
                  !IsConstructibleOrConvertibleFrom<TOther>() && !IsAssignableFrom<TOther>(),
              Optional&>
@@ -350,7 +354,7 @@ public:
     }
 
     template <typename TOther>
-    EnableIf<!std::is_same<TOther, TRaw>::value && std::is_constructible<ValueType, TOther>::value &&
+    detail::EnableIf<!std::is_same<TOther, TRaw>::value && std::is_constructible<ValueType, TOther>::value &&
                  std::is_assignable<ValueType&, TOther>::value &&
                  !IsConstructibleOrConvertibleFrom<TOther>() && !IsAssignableFrom<TOther>(),
              Optional&>
@@ -371,7 +375,7 @@ public:
     }
 
     // Modifiers
-    template <typename... TArgs, typename = EnableIf<std::is_constructible<ValueType, TArgs...>::value>>
+    template <typename... TArgs, typename = detail::EnableIf<std::is_constructible<ValueType, TArgs...>::value>>
     ValueType& emplace(TArgs&&... args) noexcept(std::is_nothrow_constructible<ValueType, TArgs...>::value) {
         reset();
         construct(std::forward<TArgs>(args)...);
@@ -380,7 +384,7 @@ public:
 
     template <typename TOther,
               typename... TArgs,
-              typename = EnableIf<
+              typename = detail::EnableIf<
                   std::is_constructible<ValueType, std::initializer_list<TOther>&, TArgs&&...>::value>>
     ValueType& emplace(std::initializer_list<TOther> list,
                        TArgs&&... args) noexcept(std::is_nothrow_constructible<ValueType, TArgs...>::value) {
@@ -465,7 +469,7 @@ public:
 
     template <typename TOther>
     auto valueOr(TOther&& value) const noexcept(std::is_nothrow_constructible<TRaw, TOther>::value)
-        -> EnableIf<std::is_constructible<TRaw, TOther>::value, TRaw> {
+        -> detail::EnableIf<std::is_constructible<TRaw, TOther>::value, TRaw> {
         return mInitialized ? mValue : static_cast<TRaw>(std::forward<TOther>(value));
     }
 
