@@ -1,0 +1,60 @@
+jobs:
+  include:
+    # GCC 5
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+      env:
+         - COMPILER="CC=gcc-5 && CXX=g++-5"
+
+    # GCC 6
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env:
+         - COMPILER="CC=gcc-6 && CXX=g++-6"
+
+    # GCC 7
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      env:
+        - COMPILER="CC=gcc-7 && CXX=g++-7"
+
+    # GCC 8
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-8
+      env:
+        - COMPILER="CC=gcc-8 && CXX=g++-8"
+
+before_install:
+    - eval "${COMPILER}"
+
+dist: trusty
+
+language: cpp
+
+compiler:
+  - gcc
+
+script:
+  - mkdir build && cd build
+  - cmake -DBUILD_TESTS=1 ..
+  - make -j$(nproc) && bin/unittests

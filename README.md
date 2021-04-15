@@ -1,4 +1,4 @@
-![GitHub](https://img.shields.io/github/license/proxict/lib-optional)
+![GitHub](https://img.shields.io/github/license/proxict/lib-optional) ![TravisCI](https://travis-ci.org/proxict/lib-optional.svg?branch=master)
 
 lib-optional
 ------------
