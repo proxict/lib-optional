@@ -258,7 +258,8 @@ public:
     template <
         typename TOther = ValueType,
         detail::EnableIf<std::is_constructible<ValueType, TOther&&>::value &&
-                             std::is_convertible<typename Optional<TOther>::ValueType&&, ValueType>::value,
+                             std::is_convertible<typename Optional<TOther>::ValueType&&, ValueType>::value &&
+                             !detail::IsReference<T>::value,
                          bool> = true>
     Optional(TOther&& value) noexcept(std::is_nothrow_constructible<ValueType, TOther&&>::value) {
         construct(std::forward<TOther>(value));
@@ -267,10 +268,18 @@ public:
     template <
         typename TOther = ValueType,
         detail::EnableIf<std::is_constructible<ValueType, TOther&&>::value &&
-                             !std::is_convertible<typename Optional<TOther>::ValueType&&, ValueType>::value,
+                             !std::is_convertible<typename Optional<TOther>::ValueType&&, ValueType>::value &&
+                             !detail::IsReference<T>::value,
                          bool> = false>
     explicit Optional(TOther&& value) noexcept(std::is_nothrow_constructible<ValueType, TOther&&>::value) {
         construct(std::forward<TOther>(value));
+    }
+
+    template <typename...,
+              typename TOther = T,
+              detail::EnableIf<detail::IsReference<TOther>::value, bool> = true>
+    Optional(T&& value) noexcept(std::is_nothrow_constructible<ValueType, TOther&&>::value) {
+        construct(value);
     }
 
     // Destructor
