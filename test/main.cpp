@@ -84,6 +84,17 @@ private:
     State mState;
 };
 
+template<typename TWhat, typename TFrom>
+class
+    IsImplicitlyConstructibleFrom{
+
+    static std::false_type test(...);
+
+    static std::true_type test(TWhat);
+public:
+    static constexpr bool value = decltype(test(std::declval<TFrom>()))::value;
+};
+
 TEST_F(OptionalTestAware, NullOpt) {
     {
         Optional<Aware> a(NullOptional);
@@ -679,6 +690,38 @@ TEST(OptionalTest, references) {
         v = 3;
         EXPECT_EQ(3, *ov);
     }
+}
+
+TEST(OptionalTest, implicitConstructionFromReference) {
+    bool fromA_toConstARef = IsImplicitlyConstructibleFrom<Optional<const A&>, A>::value;
+    EXPECT_TRUE(fromA_toConstARef);
+
+    bool fromARef_toConstARef = IsImplicitlyConstructibleFrom<Optional<const A&>, A&>::value;
+    EXPECT_TRUE(fromARef_toConstARef);
+
+    bool fromConstA_toConstARef = IsImplicitlyConstructibleFrom<Optional<const A&>, const A>::value;
+    EXPECT_TRUE(fromConstA_toConstARef);
+
+    bool fromConstARef_toConstARef = IsImplicitlyConstructibleFrom<Optional<const A&>, const A&>::value;
+    EXPECT_TRUE(fromConstARef_toConstARef);
+
+    bool fromA_toARef = IsImplicitlyConstructibleFrom<Optional<A&>, A>::value;
+    EXPECT_FALSE(fromA_toARef);
+
+    bool fromConstA_toARef = IsImplicitlyConstructibleFrom<Optional<A&>, const A>::value;
+    EXPECT_FALSE(fromConstA_toARef);
+
+    bool fromConstARef_toARef = IsImplicitlyConstructibleFrom<Optional<A&>, const A&>::value;
+    EXPECT_FALSE(fromConstARef_toARef);
+
+    bool fromB_toB = IsImplicitlyConstructibleFrom<Optional<const B&>, B&>::value;
+    EXPECT_TRUE(fromB_toB);
+
+    bool fromB_toA = IsImplicitlyConstructibleFrom<Optional<const A&>, B&>::value;
+    EXPECT_TRUE(fromB_toA);
+
+    bool fromA_toB = IsImplicitlyConstructibleFrom<Optional<const B&>, A&>::value;
+    EXPECT_FALSE(fromA_toB);
 }
 
 TEST(OptionalTest, hash) {
