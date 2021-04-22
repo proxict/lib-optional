@@ -6,6 +6,9 @@
 
 using namespace libOptional;
 
+struct A {};
+struct B : A {};
+
 class OptionalTestAware : public ::testing::Test {
 protected:
     struct State {
@@ -112,6 +115,13 @@ TEST_F(OptionalTestAware, copyCtor) {
     EXPECT_FALSE(getState().ctor);
     EXPECT_FALSE(getState().copyAssigned);
     EXPECT_TRUE(getState().copyCtor);
+    getState() = false;
+
+    Optional<Aware> u;
+    Optional<Aware> c(u);
+    EXPECT_FALSE(getState().ctor);
+    EXPECT_FALSE(getState().copyAssigned);
+    EXPECT_FALSE(getState().copyCtor);
 
     // Optional<Noncopyable> c;
     // Optional<Noncopyable> d(c); // Fails to compile - OK
@@ -129,6 +139,15 @@ TEST_F(OptionalTestAware, moveCtor) {
     EXPECT_FALSE(getState().copyAssigned);
     EXPECT_FALSE(getState().moveAssigned);
     EXPECT_TRUE(getState().moveCtor);
+    getState() = false;
+
+    Optional<Aware> u;
+    Optional<Aware> c(std::move(u));
+    EXPECT_FALSE(getState().ctor);
+    EXPECT_FALSE(getState().copyCtor);
+    EXPECT_FALSE(getState().copyAssigned);
+    EXPECT_FALSE(getState().moveAssigned);
+    EXPECT_FALSE(getState().moveCtor);
 }
 
 TEST_F(OptionalTestAware, copyAssign) {
@@ -157,6 +176,34 @@ TEST_F(OptionalTestAware, copyAssign) {
         b = a;
         EXPECT_TRUE(getState().ctor);
         EXPECT_TRUE(getState().dtor);
+    }
+    {
+        Optional<A*> a(nullptr);
+        Optional<B*> b(nullptr);
+        a = b;
+        EXPECT_TRUE(a);
+        EXPECT_TRUE(b);
+    }
+    {
+        Optional<A*> a;
+        Optional<B*> b;
+        a = b;
+        EXPECT_FALSE(a);
+        EXPECT_FALSE(b);
+    }
+    {
+        Optional<A*> a(nullptr);
+        Optional<B*> b;
+        a = b;
+        EXPECT_FALSE(a);
+        EXPECT_FALSE(b);
+    }
+    {
+        Optional<A*> a;
+        Optional<B*> b(nullptr);
+        a = b;
+        EXPECT_TRUE(a);
+        EXPECT_TRUE(b);
     }
 }
 
@@ -191,22 +238,100 @@ TEST_F(OptionalTestAware, moveAssign) {
         EXPECT_TRUE(getState().ctor);
         EXPECT_TRUE(getState().dtor);
     }
+    {
+        Optional<std::string> a("dog");
+        std::string b;
+        a = std::move(b);
+        EXPECT_TRUE(bool(a));
+        EXPECT_EQ(a->size(), 0);
+    }
+    {
+        Optional<std::string> a;
+        std::string b("dog");
+        a = std::move(b);
+        EXPECT_TRUE(bool(a));
+        EXPECT_EQ(*a, "dog");
+    }
+    {
+        Optional<A*> a(nullptr);
+        Optional<B*> b(nullptr);
+        a = std::move(b);
+        EXPECT_TRUE(a);
+    }
+    {
+        Optional<A*> a;
+        Optional<B*> b;
+        a = std::move(b);
+        EXPECT_FALSE(a);
+    }
+    {
+        Optional<A*> a(nullptr);
+        Optional<B*> b;
+        a = std::move(b);
+        EXPECT_FALSE(a);
+    }
+    {
+        Optional<A*> a;
+        Optional<B*> b(nullptr);
+        a = std::move(b);
+        EXPECT_TRUE(a);
+    }
 }
 
 TEST(OptionalTest, convertingCopyCtor) {
-    Optional<std::string> a("This is a test string");
-    Optional<std::ostringstream> b(a);
-    EXPECT_TRUE(bool(a));
-    EXPECT_TRUE(bool(b));
-    EXPECT_EQ(*a, b->str());
+    {
+        Optional<std::string> a("This is a test string");
+        Optional<std::ostringstream> b(a);
+        EXPECT_TRUE(bool(a));
+        EXPECT_TRUE(bool(b));
+        EXPECT_EQ(*a, b->str());
+    }
+    {
+        Optional<std::string> a;
+        Optional<std::ostringstream> b(a);
+        EXPECT_FALSE(bool(a));
+        EXPECT_FALSE(bool(b));
+    }
+    {
+        Optional<B*> a(nullptr);
+        Optional<A*> b(a);
+        EXPECT_TRUE(bool(a));
+        EXPECT_TRUE(bool(b));
+    }
+    {
+        Optional<B*> a;
+        Optional<A*> b(a);
+        EXPECT_FALSE(bool(a));
+        EXPECT_FALSE(bool(b));
+    }
 }
 
 TEST(OptionalTest, convertingMoveCtor) {
-    Optional<std::string> a("This is a test string");
-    Optional<std::ostringstream> b(std::move(a));
-    EXPECT_TRUE(bool(a));
-    EXPECT_TRUE(bool(b));
-    EXPECT_EQ(*a, b->str());
+    {
+        Optional<std::string> a("This is a test string");
+        Optional<std::ostringstream> b(std::move(a));
+        EXPECT_TRUE(bool(a));
+        EXPECT_TRUE(bool(b));
+        EXPECT_EQ(*a, b->str());
+    }
+    {
+        Optional<std::string> a;
+        Optional<std::ostringstream> b(std::move(a));
+        EXPECT_FALSE(bool(a));
+        EXPECT_FALSE(bool(b));
+    }
+    {
+        Optional<B*> a(nullptr);
+        Optional<A*> b(std::move(a));
+        EXPECT_TRUE(bool(a));
+        EXPECT_TRUE(bool(b));
+    }
+    {
+        Optional<B*> a;
+        Optional<A*> b(std::move(a));
+        EXPECT_FALSE(bool(a));
+        EXPECT_FALSE(bool(b));
+    }
 }
 
 TEST(OptionalTest, inPlaceCtor) {
@@ -264,17 +389,25 @@ TEST_F(OptionalTestAware, assignNullOpt) {
 
 TEST_F(OptionalTestAware, emplace) {
     {
-        Optional<Aware> a;
-        EXPECT_FALSE(bool(a));
-        a.emplace(getState());
-        EXPECT_TRUE(bool(a));
-        EXPECT_TRUE(getState().ctor);
-        EXPECT_FALSE(getState().copyCtor);
-        EXPECT_FALSE(getState().moveCtor);
-        EXPECT_FALSE(getState().copyAssigned);
-        EXPECT_FALSE(getState().moveAssigned);
+        {
+            Optional<Aware> a;
+            EXPECT_FALSE(bool(a));
+            a.emplace(getState());
+            EXPECT_TRUE(bool(a));
+            EXPECT_TRUE(getState().ctor);
+            EXPECT_FALSE(getState().copyCtor);
+            EXPECT_FALSE(getState().moveCtor);
+            EXPECT_FALSE(getState().copyAssigned);
+            EXPECT_FALSE(getState().moveAssigned);
+        }
+        EXPECT_TRUE(getState().dtor);
     }
-    EXPECT_TRUE(getState().dtor);
+    {
+        Optional<std::vector<int>> a;
+        a.emplace({1, 2, 3});
+        EXPECT_TRUE(bool(a));
+        EXPECT_EQ(*a, std::vector<int>({1, 2, 3}));
+    }
 }
 
 TEST_F(OptionalTestAware, reset) {
@@ -286,14 +419,53 @@ TEST_F(OptionalTestAware, reset) {
 }
 
 TEST_F(OptionalTestAware, swap) {
-    Optional<std::string> a("A");
-    Optional<std::string> b("B");
-    std::swap(a, b);
-    EXPECT_TRUE(bool(a));
-    EXPECT_TRUE(bool(b));
+    {
+        Optional<std::string> a("A");
+        Optional<std::string> b("B");
+        std::swap(a, b);
+        EXPECT_TRUE(bool(a));
+        EXPECT_TRUE(bool(b));
 
-    EXPECT_EQ(*a, "B");
-    EXPECT_EQ(*b, "A");
+        EXPECT_EQ(*a, "B");
+        EXPECT_EQ(*b, "A");
+    }
+    {
+        Optional<std::string> a("A");
+        Optional<std::string> b;
+        std::swap(a, b);
+        EXPECT_FALSE(bool(a));
+        EXPECT_TRUE(bool(b));
+
+        EXPECT_EQ(a, NullOptional);
+        EXPECT_EQ(*b, "A");
+    }
+    {
+        Optional<std::string> a;
+        Optional<std::string> b("B");
+        std::swap(a, b);
+        EXPECT_TRUE(bool(a));
+        EXPECT_FALSE(bool(b));
+
+        EXPECT_EQ(*a, "B");
+        EXPECT_EQ(b, NullOptional);
+    }
+}
+
+TEST(OptionalTest, assignViaRef) {
+    Optional<int> v(42);
+    EXPECT_EQ(*v, 42);
+    *v = 0;
+    EXPECT_EQ(*v, 0);
+}
+
+TEST(OptionalTest, dereference) {
+    const Optional<std::string> v("abc");
+    EXPECT_EQ(v->size(), 3);
+}
+
+TEST(OptionalTest, dereferenceRvalue) {
+    EXPECT_EQ(*Optional<std::string>("psycho"), "psycho");
+    EXPECT_EQ(Optional<std::string>("psycho")->size(), 6);
 }
 
 TEST(OptionalTest, hasValue) {
@@ -304,19 +476,70 @@ TEST(OptionalTest, hasValue) {
 }
 
 TEST(OptionalTest, value) {
-    Optional<int> v(3);
-    EXPECT_EQ(v.value(), 3);
+    {
+        Optional<int> v(3);
+        EXPECT_EQ(v.value(), 3);
+        v.value() = 4;
+        EXPECT_EQ(v.value(), 4);
+    }
+    {
+        const Optional<int> v(5);
+        EXPECT_EQ(v.value(), 5);
+    }
+    {
+        int v = 5;
+        const Optional<int&> o(v);
+        EXPECT_EQ(o.value(), 5);
+    }
+    {
+        int v = 5;
+        Optional<int&> o(v);
+        EXPECT_EQ(o.value(), 5);
+    }
+    EXPECT_EQ(Optional<int>(1).value(), 1);
 }
 
 TEST(OptionalTest, BadOptionalAccess) {
-    Optional<int> v;
-    EXPECT_THROW(v.value(), BadOptionalAccess);
+    {
+        Optional<int> v;
+        EXPECT_THROW(v.value(), BadOptionalAccess);
+    }
+    {
+        const Optional<int> v;
+        EXPECT_THROW(v.value(), BadOptionalAccess);
+    }
+    {
+        Optional<std::string> v;
+        EXPECT_THROW(std::move(v.value()), BadOptionalAccess);
+    }
+    {
+        const Optional<int&> v;
+        EXPECT_THROW(v.value(), BadOptionalAccess);
+    }
+    {
+        Optional<int&> v;
+        EXPECT_THROW(v.value(), BadOptionalAccess);
+    }
+    EXPECT_THROW(Optional<int>().value(), BadOptionalAccess);
+    try {
+        Optional<int>().value();
+    } catch (const BadOptionalAccess& e) {
+        EXPECT_NE(e.what(), nullptr);
+    }
 }
 
 TEST_F(OptionalTestAware, moveFrom) {
-    Optional<Aware> a(getState());
-    Optional<Aware> b(std::move(a.value()));
-    EXPECT_TRUE(getState().moveCtor);
+    {
+        Optional<Aware> a(getState());
+        Aware b(std::move(a.value()));
+        EXPECT_TRUE(getState().moveCtor);
+    }
+    getState() = false;
+    {
+        Optional<Aware> a(getState());
+        Aware b(std::move(*a));
+        EXPECT_TRUE(getState().moveCtor);
+    }
 }
 
 TEST(OptionalTest, valueOr) {
@@ -324,12 +547,64 @@ TEST(OptionalTest, valueOr) {
     EXPECT_EQ(5, a.valueOr(3));
     a = NullOptional;
     EXPECT_EQ(3, a.valueOr(3));
+    {
+        int k = 42;
+        int v = 1;
+        Optional<int&> ov(k);
+        int& r = ov.valueOr(v);
+        EXPECT_EQ(42, r);
+        EXPECT_EQ(1, v);
+        r = 3;
+        EXPECT_EQ(3, k);
+        EXPECT_EQ(1, v);
+    }
+    {
+        const int k = 42;
+        const int v = 1;
+        Optional<const int&> ov(k);
+        const int& r = ov.valueOr(v);
+        EXPECT_EQ(42, r);
+        EXPECT_EQ(1, v);
+        const_cast<int&>(r) = 3;
+        EXPECT_EQ(3, k);
+        EXPECT_EQ(1, v);
+    }
+    {
+        int v = 1;
+        Optional<int&> ov;
+        int& r = ov.valueOr(v);
+        EXPECT_EQ(1, r);
+        EXPECT_EQ(1, v);
+        r = 3;
+        EXPECT_EQ(3, v);
+    }
+    {
+        const int v = 1;
+        Optional<const int&> ov;
+        const int& r = ov.valueOr(v);
+        EXPECT_EQ(1, r);
+        EXPECT_EQ(1, v);
+        const_cast<int&>(r) = 3;
+        EXPECT_EQ(3, v);
+    }
 }
 
 TEST(OptionalTest, equality) {
     Optional<int> oN(NullOptional);
     Optional<int> o0(0);
     Optional<int> o1(1);
+
+    EXPECT_FALSE(o0 == o1);
+    EXPECT_TRUE(o0 != o1);
+    EXPECT_TRUE(o0 < o1);
+    EXPECT_FALSE(o0 > o1);
+    EXPECT_TRUE(o0 <= o1);
+    EXPECT_FALSE(o0 >= o1);
+
+    EXPECT_FALSE(o1 == 0);
+    EXPECT_FALSE(0 == o1);
+    EXPECT_TRUE(o1 != 0);
+    EXPECT_TRUE(0 != o1);
 
     EXPECT_TRUE(oN < 0);
     EXPECT_TRUE(oN < 1);
@@ -359,6 +634,7 @@ TEST(OptionalTest, equality) {
     EXPECT_FALSE(o1 <= 0);
     EXPECT_TRUE(o1 <= 1);
 
+    EXPECT_TRUE(0 < o1);
     EXPECT_TRUE(0 > oN);
     EXPECT_TRUE(1 > oN);
     EXPECT_FALSE(0 > o0);
@@ -366,12 +642,25 @@ TEST(OptionalTest, equality) {
     EXPECT_FALSE(0 > o1);
     EXPECT_FALSE(1 > o1);
 
+    EXPECT_TRUE(0 >= oN);
     EXPECT_FALSE(0 <= oN);
     EXPECT_FALSE(1 <= oN);
     EXPECT_TRUE(0 <= o0);
     EXPECT_FALSE(1 <= o0);
     EXPECT_TRUE(0 <= o1);
     EXPECT_TRUE(1 <= o1);
+
+    EXPECT_FALSE(NullOptional == o1);
+    EXPECT_TRUE(o1 != NullOptional);
+    EXPECT_TRUE(NullOptional != o1);
+    EXPECT_FALSE(o1 < NullOptional);
+    EXPECT_TRUE(NullOptional < o1);
+    EXPECT_FALSE(o1 <= NullOptional);
+    EXPECT_TRUE(NullOptional <= o1);
+    EXPECT_TRUE(o1 > NullOptional);
+    EXPECT_FALSE(NullOptional > o1);
+    EXPECT_TRUE(o1 >= NullOptional);
+    EXPECT_FALSE(NullOptional >= o1);
 }
 
 TEST(OptionalTest, references) {

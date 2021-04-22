@@ -379,7 +379,8 @@ public:
 
     // Modifiers
     template <typename... TArgs,
-              typename = detail::EnableIf<std::is_constructible<ValueType, TArgs...>::value>>
+              typename = detail::EnableIf<!detail::IsReference<T>::value &&
+                                          std::is_constructible<ValueType, TArgs...>::value>>
     ValueType& emplace(TArgs&&... args) noexcept(std::is_nothrow_constructible<ValueType, TArgs...>::value) {
         reset();
         construct(std::forward<TArgs>(args)...);
@@ -389,6 +390,7 @@ public:
     template <typename TOther,
               typename... TArgs,
               typename = detail::EnableIf<
+                  !detail::IsReference<T>::value &&
                   std::is_constructible<ValueType, std::initializer_list<TOther>&, TArgs&&...>::value>>
     ValueType& emplace(std::initializer_list<TOther> list,
                        TArgs&&... args) noexcept(std::is_nothrow_constructible<ValueType, TArgs...>::value) {
@@ -445,11 +447,14 @@ public:
         return mValue;
     }
 
+    template <typename TOther = T,
+              typename = detail::EnableIf<!detail::IsReference<TOther>::value, ValueType&&>>
     ValueType&& operator*() && noexcept {
         assert(mInitialized);
         return std::move(mValue);
     }
 
+    template <typename TOther = T, typename detail::EnableIf<!detail::IsReference<TOther>::value, bool> = 0>
     const ValueType& value() const& noexcept(false) {
         if (!mInitialized) {
             throw BadOptionalAccess();
@@ -457,6 +462,15 @@ public:
         return mValue;
     }
 
+    template <typename TOther = T, typename detail::EnableIf<detail::IsReference<TOther>::value, bool> = 1>
+    TConstRef value() const& noexcept(false) {
+        if (!mInitialized) {
+            throw BadOptionalAccess();
+        }
+        return mValue.get();
+    }
+
+    template <typename TOther = T, typename detail::EnableIf<!detail::IsReference<TOther>::value, bool> = 0>
     ValueType& value() & noexcept(false) {
         if (!mInitialized) {
             throw BadOptionalAccess();
@@ -464,6 +478,15 @@ public:
         return mValue;
     }
 
+    template <typename TOther = T, typename detail::EnableIf<detail::IsReference<TOther>::value, bool> = 1>
+    TRef value() & noexcept(false) {
+        if (!mInitialized) {
+            throw BadOptionalAccess();
+        }
+        return mValue.get();
+    }
+
+    template <typename TOther = T, typename = detail::EnableIf<!detail::IsReference<TOther>::value>>
     ValueType&& value() && noexcept(false) {
         if (!mInitialized) {
             throw BadOptionalAccess();
@@ -471,10 +494,30 @@ public:
         return std::move(mValue);
     }
 
-    template <typename TOther>
+    template <typename TOther,
+              detail::EnableIf<std::is_same<TOther, T>::value && !detail::IsReference<T>::value &&
+                                   std::is_constructible<TRaw, TOther>::value,
+                               int> = 0>
     auto valueOr(TOther&& value) const noexcept(std::is_nothrow_constructible<TRaw, TOther>::value)
         -> detail::EnableIf<std::is_constructible<TRaw, TOther>::value, TRaw> {
         return mInitialized ? mValue : static_cast<TRaw>(std::forward<TOther>(value));
+    }
+
+    template <typename TOther,
+              detail::EnableIf<!std::is_same<const TOther&, T>::value && std::is_same<TOther&, T>::value &&
+                                   detail::IsReference<T>::value,
+                               int> = 1>
+    TRef valueOr(TOther& value) noexcept(std::is_nothrow_constructible<TRaw, TOther>::value) {
+        return mInitialized ? mValue.get() : value;
+    }
+
+    template <typename TOther,
+              detail::EnableIf<!std::is_same<TOther&, T>::value && std::is_same<const TOther&, T>::value &&
+                                   detail::IsReference<T>::value,
+                               int> = 2>
+    TConstRef valueOr(const TOther& value) const
+        noexcept(std::is_nothrow_constructible<TRaw, TOther>::value) {
+        return mInitialized ? static_cast<const TRaw&>(mValue.get()) : value;
     }
 
 private:
