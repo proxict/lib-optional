@@ -1,7 +1,4 @@
-if (NOT TARGET gmock AND NOT TARGET gtest)
-    add_subdirectory(external/googletest)
-endif()
-
+cmake_minimum_required(VERSION 3.14)
 add_executable(unittests
     main.cpp
 )
@@ -17,6 +14,14 @@ target_link_options(unittests
     PRIVATE --coverage
 )
 
+# GoogleTest
+include(FetchContent)
+FetchContent_Declare(googletest
+  URL https://github.com/google/googletest/archive/master.zip
+)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
 target_link_libraries(unittests
     PRIVATE lib-optional
     PRIVATE gmock
@@ -29,3 +34,4 @@ add_custom_target(coverage
 )
 
 add_dependencies(coverage unittests)
+add_test(NAME unit-tests COMMAND unittests)
