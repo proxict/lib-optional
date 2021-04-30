@@ -559,6 +559,14 @@ TEST(OptionalTest, valueOr) {
     a = NullOptional;
     EXPECT_EQ(3, a.valueOr(3));
     {
+        Optional<uint64_t> ov;
+        EXPECT_EQ(ov.valueOr(1), 1);
+    }
+    {
+        Optional<std::string> ov("abc");
+        EXPECT_EQ(ov.valueOr("def"), "abc");
+    }
+    {
         int k = 42;
         int v = 1;
         Optional<int&> ov(k);
@@ -597,6 +605,18 @@ TEST(OptionalTest, valueOr) {
         EXPECT_EQ(1, v);
         const_cast<int&>(r) = 3;
         EXPECT_EQ(3, v);
+    }
+    {
+        const B v;
+        Optional<const A&> ov;
+        const A& r = ov.valueOr(v);
+        (void)r;
+    }
+    {
+        B v;
+        Optional<A&> ov;
+        A& r = ov.valueOr(v);
+        (void)r;
     }
 }
 

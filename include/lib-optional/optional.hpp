@@ -504,8 +504,7 @@ public:
     }
 
     template <typename TOther,
-              detail::EnableIf<std::is_same<TOther, T>::value && !detail::IsReference<T>::value &&
-                                   std::is_constructible<TRaw, TOther>::value,
+              detail::EnableIf<!detail::IsReference<T>::value && std::is_constructible<TRaw, TOther>::value,
                                int> = 0>
     auto valueOr(TOther&& value) const noexcept(std::is_nothrow_constructible<TRaw, TOther>::value)
         -> detail::EnableIf<std::is_constructible<TRaw, TOther>::value, TRaw> {
@@ -513,15 +512,14 @@ public:
     }
 
     template <typename TOther,
-              detail::EnableIf<!std::is_same<const TOther&, T>::value && std::is_same<TOther&, T>::value &&
-                                   detail::IsReference<T>::value,
+              detail::EnableIf<std::is_constructible<TRaw&, TOther&>::value && detail::IsReference<T>::value,
                                int> = 1>
     TRef valueOr(TOther& value) noexcept(std::is_nothrow_constructible<TRaw, TOther>::value) {
         return mInitialized ? mValue.get() : value;
     }
 
     template <typename TOther,
-              detail::EnableIf<!std::is_same<TOther&, T>::value && std::is_same<const TOther&, T>::value &&
+              detail::EnableIf<std::is_constructible<const TRaw&, const TOther&>::value &&
                                    detail::IsReference<T>::value,
                                int> = 2>
     TConstRef valueOr(const TOther& value) const
