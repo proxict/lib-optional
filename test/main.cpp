@@ -84,13 +84,12 @@ private:
     State mState;
 };
 
-template<typename TWhat, typename TFrom>
-class
-    IsImplicitlyConstructibleFrom{
-
+template <typename TWhat, typename TFrom>
+class IsImplicitlyConstructibleFrom {
     static std::false_type test(...);
 
     static std::true_type test(TWhat);
+
 public:
     static constexpr bool value = decltype(test(std::declval<TFrom>()))::value;
 };
@@ -415,9 +414,9 @@ TEST_F(OptionalTestAware, emplace) {
     }
     {
         Optional<std::vector<int>> a;
-        a.emplace({1, 2, 3});
+        a.emplace({ 1, 2, 3 });
         EXPECT_TRUE(bool(a));
-        EXPECT_EQ(*a, std::vector<int>({1, 2, 3}));
+        EXPECT_EQ(*a, std::vector<int>({ 1, 2, 3 }));
     }
 }
 
@@ -462,6 +461,31 @@ TEST_F(OptionalTestAware, swap) {
     }
 }
 
+TEST(OptionalTest, reset) {
+    {
+        Optional<A> o(A{});
+        o.reset();
+        EXPECT_FALSE(bool(o));
+    }
+    {
+        A v;
+        Optional<const A&> o(v);
+        o.reset();
+        EXPECT_FALSE(bool(o));
+    }
+    {
+        A v;
+        Optional<A&> o(v);
+        o.reset();
+        EXPECT_FALSE(bool(o));
+    }
+    {
+        Optional<unsigned long> o(1);
+        o.reset();
+        EXPECT_FALSE(bool(o));
+    }
+}
+
 TEST(OptionalTest, assignViaRef) {
     Optional<int> v(42);
     EXPECT_EQ(*v, 42);
@@ -470,8 +494,29 @@ TEST(OptionalTest, assignViaRef) {
 }
 
 TEST(OptionalTest, dereference) {
-    const Optional<std::string> v("abc");
-    EXPECT_EQ(v->size(), 3);
+    {
+        const Optional<int> v(1);
+        EXPECT_EQ(*v, 1);
+    }
+    {
+        int k = 1;
+        const Optional<int&> v(k);
+        EXPECT_EQ(*v, 1);
+    }
+    {
+        const Optional<std::string> v("abc");
+        EXPECT_EQ(v->size(), 3);
+    }
+    {
+        std::string k("abc");
+        const Optional<std::string&> v(k);
+        EXPECT_EQ(v->size(), 3);
+    }
+    {
+        std::string k("abc");
+        Optional<std::string&> v(k);
+        EXPECT_EQ(v->size(), 3);
+    }
 }
 
 TEST(OptionalTest, dereferenceRvalue) {

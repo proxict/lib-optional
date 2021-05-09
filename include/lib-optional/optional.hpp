@@ -436,34 +436,81 @@ public:
 
     bool hasValue() const noexcept { return mInitialized; }
 
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<!detail::IsReference<TOther>::value, bool> = 0>
     TConstPtr operator->() const noexcept {
         assert(mInitialized);
         return &mValue;
     }
 
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<detail::IsReference<TOther>::value, bool> = 1>
+    TConstPtr operator->() const noexcept {
+        assert(mInitialized);
+        return &mValue.get();
+    }
+
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<!detail::IsReference<TOther>::value, bool> = 0>
     TPtr operator->() noexcept {
         assert(mInitialized);
         return &mValue;
     }
 
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<detail::IsReference<TOther>::value, bool> = 1>
+    TPtr operator->() noexcept {
+        assert(mInitialized);
+        return &mValue.get();
+    }
+
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<!detail::IsReference<TOther>::value, bool> = 0>
     TConstRef operator*() const& noexcept {
         assert(mInitialized);
         return mValue;
     }
 
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<detail::IsReference<TOther>::value, bool> = 1>
+    TConstRef operator*() const& noexcept {
+        assert(mInitialized);
+        return mValue.get();
+    }
+
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<!detail::IsReference<TOther>::value, bool> = 0>
     TRef operator*() & noexcept {
         assert(mInitialized);
         return mValue;
     }
 
-    template <typename TOther = T,
-              typename = detail::EnableIf<!detail::IsReference<TOther>::value, ValueType&&>>
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<detail::IsReference<TOther>::value, bool> = 1>
+    TRef operator*() & noexcept {
+        assert(mInitialized);
+        return mValue.get();
+    }
+
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<!detail::IsReference<TOther>::value, bool> = 0>
     ValueType&& operator*() && noexcept {
         assert(mInitialized);
         return std::move(mValue);
     }
 
-    template <typename TOther = T, typename detail::EnableIf<!detail::IsReference<TOther>::value, bool> = 0>
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<!detail::IsReference<TOther>::value, bool> = 0>
     const ValueType& value() const& noexcept(false) {
         if (!mInitialized) {
             throw BadOptionalAccess();
@@ -471,7 +518,9 @@ public:
         return mValue;
     }
 
-    template <typename TOther = T, typename detail::EnableIf<detail::IsReference<TOther>::value, bool> = 1>
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<detail::IsReference<TOther>::value, bool> = 1>
     TConstRef value() const& noexcept(false) {
         if (!mInitialized) {
             throw BadOptionalAccess();
@@ -479,7 +528,9 @@ public:
         return mValue.get();
     }
 
-    template <typename TOther = T, typename detail::EnableIf<!detail::IsReference<TOther>::value, bool> = 0>
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<!detail::IsReference<TOther>::value, bool> = 0>
     ValueType& value() & noexcept(false) {
         if (!mInitialized) {
             throw BadOptionalAccess();
@@ -487,7 +538,9 @@ public:
         return mValue;
     }
 
-    template <typename TOther = T, typename detail::EnableIf<detail::IsReference<TOther>::value, bool> = 1>
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<detail::IsReference<TOther>::value, bool> = 1>
     TRef value() & noexcept(false) {
         if (!mInitialized) {
             throw BadOptionalAccess();
@@ -495,7 +548,9 @@ public:
         return mValue.get();
     }
 
-    template <typename TOther = T, typename = detail::EnableIf<!detail::IsReference<TOther>::value>>
+    template <typename...,
+              typename TOther = T,
+              typename detail::EnableIf<!detail::IsReference<TOther>::value, bool> = 0>
     ValueType&& value() && noexcept(false) {
         if (!mInitialized) {
             throw BadOptionalAccess();
