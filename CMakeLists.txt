@@ -11,6 +11,7 @@ target_include_directories(lib-optional
     INTERFACE include
 )
 
+option(BUILD_TESTS "Build unittests" OFF)
 if (BUILD_TESTS)
     add_subdirectory(test)
 endif()
