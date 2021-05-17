@@ -585,7 +585,7 @@ public:
 private:
     template <typename... TArgs>
     void construct(TArgs&&... args) noexcept(std::is_nothrow_constructible<ValueType, TArgs...>::value) {
-        new ((void*)&mValue) ValueType(std::forward<TArgs>(args)...);
+        new (reinterpret_cast<void*>(&mValue)) ValueType(std::forward<TArgs>(args)...);
         mInitialized = true;
     }
 
